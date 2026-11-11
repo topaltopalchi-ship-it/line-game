@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SAVAŞ — Arena Fighter</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d18;color:#fff;font-family:system-ui,Arial}body{display:flex;align-items:center;justify-content:center}.shell{width:min(100vw,1100px);padding:10px}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.logo{font-weight:1000;letter-spacing:5px;font-size:clamp(22px,4vw,36px);color:#f7c65b;text-shadow:0 3px #7b351b}.sub{font-size:11px;color:#9eabc3;letter-spacing:2px}.hud{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:8px}.name{text-transform:uppercase;font-size:12px;letter-spacing:2px;color:#dce5f5}.name.right{text-align:right}.bar{height:15px;background:#27334b;border:2px solid #75839b;border-radius:20px;overflow:hidden;margin-top:4px}.fill{height:100%;width:100%;background:linear-gradient(90deg,#54e08a,#b8f36b);transition:width .15s}.rightbar .fill{margin-left:auto;background:linear-gradient(90deg,#ffc35a,#ff654e)}.timer{font-size:25px;font-weight:900;color:#f7c65b}.stage{position:relative;border:2px solid #42516d;border-radius:14px;overflow:hidden;box-shadow:0 18px 60px #0009;background:#101a2b}canvas{display:block;width:100%;height:auto;touch-action:none}.message{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;font-size:clamp(24px,5vw,52px);font-weight:1000;text-shadow:0 4px 12px #000;letter-spacing:3px}.message small{display:block;font-size:13px;letter-spacing:1px;color:#f7d78b;margin-top:10px}.controls{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:12px}.cluster{display:flex;gap:8px;align-items:center}.btn{border:1px solid #647493;background:linear-gradient(#263650,#121c30);color:white;border-radius:14px;min-width:54px;height:54px;font-size:20px;font-weight:900;box-shadow:0 4px #080d18;touch-action:none;user-select:none}.btn:active,.btn.active{transform:translateY(3px);box-shadow:0 1px #080d18;background:#425a7d}.attack{min-width:64px;border-color:#d69a4c;background:linear-gradient(#8d512c,#45251f)}.hint{text-align:center;color:#8f9db5;font-size:11px;margin-top:9px}.restart{font-size:13px;height:38px;min-width:85px}
+@media(min-width:750px){.btn{width:62px;height:58px}.controls{padding:0 24px}}
+</style>
+</head>
+<body><main class="shell">
+<header class="top"><div><div class="logo">SAVAŞ</div><div class="sub">FIGHT • SURVIVE • WIN</div></div><button class="btn restart" id="restart">RESTART</button></header>
+<section class="hud"><div><div class="name">PLAYER 1</div><div class="bar"><div class="fill" id="pbar"></div></div></div><div class="timer" id="timer">60</div><div class="rightbar"><div class="name right">CPU RIVAL</div><div class="bar"><div class="fill" id="ebar"></div></div></div></section>
+<div class="stage"><canvas id="game" width="960" height="500"></canvas><div class="message" id="message">SAVAŞ<small>Press START or any control to fight</small></div></div>
+<div class="controls"><div class="cluster"><button class="btn" data-key="left">◀</button><button class="btn" data-key="right">▶</button><button class="btn" data-key="jump">⬆</button></div><div class="cluster"><button class="btn attack" data-key="kick">KICK</button><button class="btn attack" data-key="punch">PUNCH</button></div></div>
+<div class="hint">Computer: A / D move · W jump · J punch · K kick · On phone: use the buttons</div>
+</main>
+<script>
+const c=document.getElementById('game'),x=c.getContext('2d'),msg=document.getElementById('message');
+const keys={};let running=false,over=false,time=60,last=0,raf;
+const floor=414;
+function fighter(px,color,face){return {x:px,y:floor-112,w:58,h:112,hp:100,color,face,vx:0,vy:0,ground:true,attack:0,cool:0,hit:false}}
+let p,e;
+function reset(){p=fighter(220,'#36c7d9',1);e=fighter(680,'#e65c54',-1);time=60;running=false;over=false;msg.style.display='flex';msg.innerHTML='SAVAŞ<small>Press any control to fight</small>';updateHud();draw()}
+function start(){if(over)reset();running=true;msg.style.display='none';last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop)}
+function updateHud(){document.getElementById('pbar').style.width=p.hp+'%';document.getElementById('ebar').style.width=e.hp+'%';document.getElementById('timer').textContent=Math.ceil(time)}
+function attack(a,type){if(a.cool>0||!running)return;a.attack=type==='kick'?22:15;a.cool=type==='kick'?42:28;a.hit=false}
+function move(a,dir){a.vx=dir*4.5}
+function controls(){let d=0;if(keys.left)d--;if(keys.right)d++;p.vx=d*4.5;if(keys.jump&&p.ground){p.vy=-13;p.ground=false}if(keys.punch)attack(p,'punch');if(keys.kick)attack(p,'kick')}
+function hitCheck(a,b){if(a.attack>0&&!a.hit){let reach=a.attack===22?100:82;let ax=a.x+a.w/2, bx=b.x+b.w/2;if(Math.abs(ax-bx)<reach&&Math.abs(a.y-b.y)<70&&a.face===Math.sign(bx-ax)){b.hp=Math.max(0,b.hp-(a.attack===22?12:7));b.vx=a.face*5;a.hit=true}}}
+function update(dt){if(!running)return;time-=dt/1000;if(time<=0||p.hp<=0||e.hp<=0){time=Math.max(0,time);running=false;over=true;let win=p.hp>e.hp? 'YOU WIN!':p.hp<e.hp?'CPU WINS':'DRAW';msg.style.display='flex';msg.innerHTML=win+'<small>Tap RESTART to play again</small>';updateHud();return}
+controls();
+let dx=p.x-e.x;e.face=dx>0?1:-1;
+if(Math.abs(dx)>78){e.vx=e.face*2.2}else{e.vx=0;if(Math.random()<.035)attack(e,Math.random()>.5?'kick':'punch')}
+for(const a of [p,e]){a.x+=a.vx;a.x=Math.max(35,Math.min(867,a.x));a.y+=a.vy;a.vy+=.62;if(a.y>=floor-a.h){a.y=floor-a.h;a.vy=0;a.ground=true}a.vx*=.82;if(a.cool>0)a.cool--;if(a.attack>0)a.attack--}
+hitCheck(p,e);hitCheck(e,p);updateHud()}
+function draw(){x.clearRect(0,0,960,500);
+let sky=x.createLinearGradient(0,0,0,500);sky.addColorStop(0,'#172b48');sky.addColorStop(1,'#090f1c');x.fillStyle=sky;x.fillRect(0,0,960,500);
+for(let i=0;i<8;i++){let bx=i*145-20;x.fillStyle=i%2?'#1b2940':'#202f49';x.fillRect(bx,175,95,240);x.fillStyle='#344560';for(let j=0;j<4;j++)x.fillRect(bx+15+j*20,195,8,170)}
+x.fillStyle='#27344a';x.fillRect(0,floor,960,86);x.fillStyle='#52617b';x.fillRect(0,floor,960,5);for(let i=0;i<960;i+=48){x.fillStyle='#35445e';x.fillRect(i,floor+22,24,3)}
+drawF(p);drawF(e);
+}
+function drawF(a){let cx=a.x+a.w/2,top=a.y; x.save();x.translate(cx,top);x.scale(a.face,1);
+x.fillStyle='#0007';x.beginPath();x.ellipse(0,113,42,8,0,0,Math.PI*2);x.fill();
+x.fillStyle=a.color;x.fillRect(-20,38,40,48);x.fillStyle='#f0c39b';x.beginPath();x.arc(0,22,19,0,Math.PI*2);x.fill();
+x.fillStyle='#172033';x.fillRect(-18,5,36,9);x.fillRect(7,19,5,4);
+x.strokeStyle=a.color;x.lineWidth=13;x.lineCap='round';
+x.beginPath();x.moveTo(-15,45);x.lineTo(-27,68);x.stroke();
+x.beginPath();x.moveTo(15,45);if(a.attack>0){x.lineTo(42,52)}else{x.lineTo(28,68)}x.stroke();
+x.strokeStyle='#d7e0ed';x.lineWidth=14;x.beginPath();x.moveTo(-10,84);x.lineTo(-14,108);x.stroke();
+x.beginPath();x.moveTo(10,84);if(a.attack>18){x.lineTo(45,88)}else{x.lineTo(16,108)}x.stroke();
+x.fillStyle='#f5c45b';x.fillRect(-20,78,40,7);x.restore()}
+function loop(t){let dt=Math.min(40,t-last);last=t;update(dt);draw();if(running)raf=requestAnimationFrame(loop)}
+document.querySelectorAll('[data-key]').forEach(b=>{let k=b.dataset.key;b.addEventListener('pointerdown',ev=>{ev.preventDefault();keys[k]=true;b.classList.add('active');start()});for(let ev of ['pointerup','pointercancel','pointerleave'])b.addEventListener(ev,()=>{keys[k]=false;b.classList.remove('active')})});
+window.addEventListener('keydown',ev=>{let map={a:'left',d:'right',w:'jump',j:'punch',k:'kick'};if(map[ev.key.toLowerCase()]){keys[map[ev.key.toLowerCase()]]=true;start()}});
+window.addEventListener('keyup',ev=>{let map={a:'left',d:'right',w:'jump',j:'punch',k:'kick'};if(map[ev.key.toLowerCase()])keys[map[ev.key.toLowerCase()]]=false});
+document.getElementById('restart').onclick=reset;
+reset();
+</script></body></html>
