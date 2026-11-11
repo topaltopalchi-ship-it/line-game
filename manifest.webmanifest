@@ -1,0 +1,12 @@
+{
+  "name": "SAVAŞ — Arena Fighter",
+  "short_name": "SAVAŞ",
+  "description": "A mobile-friendly fighting game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#080d18",
+  "theme_color": "#080d18",
+  "icons": []
+}
